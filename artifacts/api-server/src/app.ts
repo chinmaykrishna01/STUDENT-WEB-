@@ -1,10 +1,12 @@
 import express, { type Express } from "express";
+import path from "node:path";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
+const webRoot = path.resolve(import.meta.dirname, "../../specforge/dist/public");
 
 app.use(
   pinoHttp({
@@ -30,5 +32,20 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+app.use(express.static(webRoot));
+app.use((req, res, next) => {
+  if (
+    req.method !== "GET" ||
+    req.path === "/api" ||
+    req.path.startsWith("/api/")
+  ) {
+    next();
+    return;
+  }
+
+  res.sendFile(path.join(webRoot, "index.html"), (error) => {
+    if (error) next(error);
+  });
+});
 
 export default app;

@@ -223,23 +223,23 @@ components:
         courseSpecification:
           type: string
           format: binary
-          description: DOCX course specification
+          description: Required course document; supports PDF, DOC/DOCX, PPTX, XLSX, ODF, RTF, CSV, TSV, Markdown, TXT, HTML, JSON, EPUB, and TeX
         blueprint:
           type: string
           format: binary
-          description: Optional DOCX, CSV, JSON, or TXT question-paper blueprint
+          description: Optional PDF, DOC/DOCX, PPTX, XLSX, ODF, RTF, CSV, TSV, Markdown, TXT, HTML, JSON, EPUB, or TeX question-paper blueprint
         template:
           type: string
           format: binary
-          description: Optional institutional HTML template
+          description: Optional institutional HTML or HTM template
         outcomeDefinitions:
           type: string
           format: binary
-          description: Optional DOCX, CSV, JSON, or TXT official PO/PSO definitions
+          description: Optional PDF, DOC/DOCX, PPTX, XLSX, ODF, RTF, CSV, TSV, Markdown, TXT, HTML, JSON, EPUB, or TeX official PO/PSO definitions
         institutionalRules:
           type: string
           format: binary
-          description: Optional JSON, CSV, or TXT institutional rules
+          description: Optional PDF, DOC/DOCX, PPTX, XLSX, ODF, RTF, CSV, TSV, Markdown, TXT, HTML, JSON, EPUB, or TeX institutional rules
     AnalysisUpdate:
       type: object
       properties:
@@ -519,4 +519,3 @@ components:
           enum: [pending, accepted, rejected, deferred]
         reviewerComment:
           type: ["string", "null"]
-

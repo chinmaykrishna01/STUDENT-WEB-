@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { extname } from "node:path";
 import mammoth from "mammoth";
 import { load } from "cheerio";
+import { OfficeParser, type SupportedFileType } from "officeparser";
+import WordExtractor from "word-extractor";
 import type {
   Analysis,
   Assessment,
@@ -23,6 +25,18 @@ const STOP_WORDS = new Set([
 
 type SourceRole = SourceFile["role"];
 type UploadedFiles = Partial<Record<SourceRole, Express.Multer.File>>;
+const officeParserFileTypes: Partial<Record<string, SupportedFileType>> = {
+  ".pdf": "pdf",
+  ".pptx": "pptx",
+  ".xlsx": "xlsx",
+  ".odt": "odt",
+  ".odp": "odp",
+  ".ods": "ods",
+  ".odg": "odg",
+  ".rtf": "rtf",
+  ".epub": "epub",
+  ".tex": "tex",
+};
 
 function htmlText(html: string): string {
   return load(html).text().replace(/\s+/g, " ").trim();
@@ -45,6 +59,14 @@ async function readUpload(
     if (!text.trim()) {
       throw new Error(`${file.originalname} did not contain readable text.`);
     }
+  } else if (extension === ".doc") {
+    const document = await new WordExtractor().extract(file.buffer);
+    text = document.getBody();
+  } else if (officeParserFileTypes[extension]) {
+    const document = await OfficeParser.parseOffice(file.buffer, {
+      fileType: officeParserFileTypes[extension],
+    });
+    text = (await document.to("text")).value;
   } else if (extension === ".html" || extension === ".htm") {
     const html = file.buffer.toString("utf8");
     text = htmlText(html);
@@ -182,7 +204,7 @@ function parseProgrammeOutcomes(text: string): ProgrammeOutcome[] {
   return parsed;
 }
 
-function parseCsvRows(text: string): string[][] {
+function parseCsvRows(text: string, delimiter = ","): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = "";
@@ -197,7 +219,7 @@ function parseCsvRows(text: string): string[][] {
       index += 1;
     } else if (char === '"') {
       quoted = !quoted;
-    } else if (char === "," && !quoted) {
+    } else if (char === delimiter && !quoted) {
       row.push(cell.trim());
       cell = "";
     } else if ((char === "\n" || char === "\r") && !quoted) {
@@ -245,8 +267,12 @@ function parseDefinitions(text: string, filename?: string): ProgrammeOutcome[] {
       return rows;
     }
   }
-  if (filename && getExtension(filename) === ".csv") {
-    const rows = parseCsvRows(text);
+  if (
+    filename &&
+    [".csv", ".tsv"].includes(getExtension(filename))
+  ) {
+    const delimiter = getExtension(filename) === ".tsv" ? "\t" : ",";
+    const rows = parseCsvRows(text, delimiter);
     if (!rows.length) return [];
     const headers = rows[0]?.map((value) => value.toLowerCase()) ?? [];
     const hasHeader = headers.some((value) => /id|code|type|description|outcome/.test(value));
@@ -600,7 +626,7 @@ export function validateCourse(
         "Course specification could not be read",
         "Course specification",
         "No extractable text was returned.",
-        "Try a readable DOCX file with selectable text. Scanned files require OCR, which is not enabled in this build.",
+        "Try a supported document with selectable text. Scanned files require OCR, which is not enabled in this build.",
       ),
     );
   }
@@ -741,7 +767,9 @@ function approvalState(
 
 export async function buildAnalysis(files: UploadedFiles): Promise<Analysis> {
   const courseFile = files.courseSpecification;
-  if (!courseFile) throw new Error("Upload a course specification DOCX to continue.");
+  if (!courseFile) {
+    throw new Error("Upload a course specification document to continue.");
+  }
 
   const roles: SourceRole[] = [
     "courseSpecification",

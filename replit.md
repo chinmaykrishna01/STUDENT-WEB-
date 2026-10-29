@@ -4,13 +4,41 @@ SpecForge extracts and reviews academic course specifications against only the i
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm run local` — build and run the web app and API together at `http://localhost:5174`
+- `pnpm --filter @workspace/api-server run dev` — build and run the API server (port 5000)
 - `pnpm --filter @workspace/specforge run dev` — run the SpecForge web app
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Production/persistent storage requires `DATABASE_URL` — Postgres connection string. Local development without it uses temporary in-memory storage; analyses are lost when the API server stops.
+
+### Single-address local run
+
+Run this once from the workspace root:
+
+```powershell
+corepack pnpm run local
+```
+
+Open `http://localhost:5174`. This serves both the web interface and `/api` from the same local server. Press Ctrl+C in the terminal to stop it. Analyses use temporary in-memory storage unless `DATABASE_URL` is configured, so they are lost when the server stops.
+
+For frontend hot reload during development, the API and Vite frontend can still be started separately:
+
+```powershell
+$env:PORT = "5000"
+corepack pnpm --filter @workspace/api-server run dev
+```
+
+In a second terminal:
+
+```powershell
+$env:PORT = "5188"
+$env:BASE_PATH = "/"
+corepack pnpm --filter @workspace/specforge run dev
+```
+
+Open `http://localhost:5188`. For persistent analyses, configure `DATABASE_URL` and push the schema before starting the API.
 
 ## Stack
 
@@ -47,7 +75,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-- Accepted file types are DOCX, HTML, CSV, JSON, and TXT, with a 10 MB per-file limit. PDF and OCR inputs are not supported.
+- Course documents and optional evidence support PDF, DOC/DOCX, PPTX, XLSX, ODF (ODT/ODP/ODS/ODG), RTF, CSV, TSV, Markdown, TXT, HTML, JSON, EPUB, and TeX, with a 10 MB per-file limit. Legacy Word documents (.doc) are supported. The HTML-template field accepts HTML/HTM only. Legacy binary Excel/PowerPoint files (.xls/.ppt) and scanned documents requiring OCR are not supported.
 - Mapping scores above zero require an explicit compatible `mappingRubric` in the supplied institutional-rules JSON.
 - A template with no supported `{{PLACEHOLDER}}` or recognized section heading is preserved unchanged and flagged as unresolved rather than silently replaced.
 - PDF export uses the browser print dialog; choose “Save as PDF.”

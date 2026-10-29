@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { proposeMappings, validateCourse } from "../src/lib/specforge-processing.ts";
+import {
+  buildAnalysis,
+  proposeMappings,
+  validateCourse,
+} from "../src/lib/specforge-processing.ts";
 
 function courseData(overrides = {}) {
   return {
@@ -39,6 +43,55 @@ function courseData(overrides = {}) {
 }
 
 const issueCodes = (issues) => issues.map((issue) => issue.code);
+
+function pdfWithText(text) {
+  const escaped = text.replaceAll("\\", "\\\\").replaceAll("(", "\\(").replaceAll(")", "\\)");
+  const stream = Buffer.from(`BT /F1 12 Tf 72 720 Td (${escaped}) Tj ET`, "ascii");
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+  ];
+  const streamHeader = Buffer.from(`<< /Length ${stream.length} >>\nstream\n`, "ascii");
+  const streamObject = Buffer.concat([
+    streamHeader,
+    stream,
+    Buffer.from("\nendstream", "ascii"),
+  ]);
+  const bodies = [...objects.map((object) => Buffer.from(object, "ascii")), streamObject];
+  let pdf = Buffer.from("%PDF-1.4\n", "ascii");
+  const offsets = [0];
+  for (const [index, body] of bodies.entries()) {
+    offsets.push(pdf.length);
+    pdf = Buffer.concat([
+      pdf,
+      Buffer.from(`${index + 1} 0 obj\n`, "ascii"),
+      body,
+      Buffer.from("\nendobj\n", "ascii"),
+    ]);
+  }
+  const xrefOffset = pdf.length;
+  const xref = [
+    `xref\n0 ${offsets.length}\n`,
+    "0000000000 65535 f \n",
+    ...offsets.slice(1).map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`),
+    `trailer\n<< /Size ${offsets.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`,
+  ].join("");
+  return Buffer.concat([pdf, Buffer.from(xref, "ascii")]);
+}
+
+test("extracts a selectable-text PDF course specification", async () => {
+  const analysis = await buildAnalysis({
+    courseSpecification: {
+      originalname: "course-specification.pdf",
+      buffer: pdfWithText("Course Title: PDF Smoke Test"),
+    },
+  });
+
+  assert.equal(analysis.sourceFiles[0]?.fileType, "PDF");
+  assert.match(analysis.sourceFiles[0]?.extractedText ?? "", /PDF Smoke Test/);
+});
 
 test("detects duplicate course outcome identifiers", () => {
   const data = courseData({

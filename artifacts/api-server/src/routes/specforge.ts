@@ -1,7 +1,6 @@
 import { Router, type IRouter, type RequestHandler } from "express";
 import multer, { type MulterError } from "multer";
 import { desc, eq } from "drizzle-orm";
-import { db, specforgeAnalysesTable } from "@workspace/db";
 import {
   CreateAnalysisResponse,
   CreateDemoAnalysisResponse,
@@ -29,12 +28,40 @@ import {
 } from "../lib/specforge-processing";
 
 const router: IRouter = Router();
+const database = process.env.DATABASE_URL
+  ? await import("@workspace/db")
+  : undefined;
+if (!database && process.env.NODE_ENV === "production") {
+  throw new Error("DATABASE_URL is required in production.");
+}
+const memoryAnalyses = new Map<string, Analysis>();
+const supportedDocuments = [
+  ".docx",
+  ".doc",
+  ".pdf",
+  ".pptx",
+  ".xlsx",
+  ".odt",
+  ".odp",
+  ".ods",
+  ".odg",
+  ".rtf",
+  ".csv",
+  ".tsv",
+  ".md",
+  ".txt",
+  ".html",
+  ".htm",
+  ".json",
+  ".epub",
+  ".tex",
+];
 const fileExtensions: Record<string, string[]> = {
-  courseSpecification: [".docx"],
-  blueprint: [".docx", ".csv", ".json", ".txt"],
+  courseSpecification: supportedDocuments,
+  blueprint: supportedDocuments,
   template: [".html", ".htm"],
-  outcomeDefinitions: [".docx", ".csv", ".json", ".txt"],
-  institutionalRules: [".json", ".csv", ".txt"],
+  outcomeDefinitions: supportedDocuments,
+  institutionalRules: supportedDocuments,
 };
 
 const upload = multer({
@@ -50,7 +77,7 @@ const upload = multer({
     if (!allowedExtensions || !allowedExtensions.includes(extension)) {
       callback(
         new Error(
-          `Unsupported file for ${file.fieldname}. Check the accepted file types and try again.`,
+          `Unsupported file for ${file.fieldname}. Accepted extensions: ${(allowedExtensions ?? []).join(", ")}.`,
         ),
       );
       return;
@@ -101,11 +128,25 @@ function getFileMap(request: Express.Request): Parameters<typeof buildAnalysis>[
   return result;
 }
 
+async function listAnalyses(): Promise<Analysis[]> {
+  if (!database) {
+    return [...memoryAnalyses.values()].sort(
+      (left, right) => right.updatedAt.getTime() - left.updatedAt.getTime(),
+    );
+  }
+  const rows = await database.db
+    .select({ data: database.specforgeAnalysesTable.data })
+    .from(database.specforgeAnalysesTable)
+    .orderBy(desc(database.specforgeAnalysesTable.updatedAt));
+  return rows.map((row) => row.data as Analysis);
+}
+
 async function findAnalysis(id: string): Promise<Analysis | undefined> {
-  const [row] = await db
-    .select({ data: specforgeAnalysesTable.data })
-    .from(specforgeAnalysesTable)
-    .where(eq(specforgeAnalysesTable.id, id))
+  if (!database) return memoryAnalyses.get(id);
+  const [row] = await database.db
+    .select({ data: database.specforgeAnalysesTable.data })
+    .from(database.specforgeAnalysesTable)
+    .where(eq(database.specforgeAnalysesTable.id, id))
     .limit(1);
   return row?.data as Analysis | undefined;
 }
@@ -119,8 +160,12 @@ function asDatabaseDate(value: unknown): Date {
 }
 
 async function persistAnalysis(analysis: Analysis): Promise<void> {
-  await db
-    .insert(specforgeAnalysesTable)
+  if (!database) {
+    memoryAnalyses.set(analysis.id, analysis);
+    return;
+  }
+  await database.db
+    .insert(database.specforgeAnalysesTable)
     .values({
       id: analysis.id,
       data: analysis,
@@ -128,7 +173,7 @@ async function persistAnalysis(analysis: Analysis): Promise<void> {
       updatedAt: asDatabaseDate(analysis.updatedAt),
     })
     .onConflictDoUpdate({
-      target: specforgeAnalysesTable.id,
+      target: database.specforgeAnalysesTable.id,
       set: {
         data: analysis,
         updatedAt: analysis.updatedAt,
@@ -137,11 +182,7 @@ async function persistAnalysis(analysis: Analysis): Promise<void> {
 }
 
 router.get("/specforge/dashboard", async (req, res): Promise<void> => {
-  const rows = await db
-    .select({ data: specforgeAnalysesTable.data })
-    .from(specforgeAnalysesTable)
-    .orderBy(desc(specforgeAnalysesTable.updatedAt));
-  const analyses = rows.map((row) => row.data as Analysis);
+  const analyses = await listAnalyses();
   const summary = {
     totalDocumentsAnalyzed: analyses.length,
     detectedIssues: analyses.reduce((total, analysis) => total + analysis.issues.length, 0),
@@ -161,11 +202,7 @@ router.get("/specforge/dashboard", async (req, res): Promise<void> => {
 });
 
 router.get("/specforge/analyses", async (req, res): Promise<void> => {
-  const rows = await db
-    .select({ data: specforgeAnalysesTable.data })
-    .from(specforgeAnalysesTable)
-    .orderBy(desc(specforgeAnalysesTable.updatedAt));
-  res.json(GetAnalysesResponse.parse(rows.map((row) => row.data)));
+  res.json(GetAnalysesResponse.parse(await listAnalyses()));
 });
 
 router.post(
@@ -234,10 +271,13 @@ router.delete("/specforge/analyses/:analysisId", async (req, res): Promise<void>
     res.status(400).json({ error: parsedParams.error.message });
     return;
   }
-  const [deleted] = await db
-    .delete(specforgeAnalysesTable)
-    .where(eq(specforgeAnalysesTable.id, parsedParams.data.analysisId))
-    .returning({ id: specforgeAnalysesTable.id });
+  const id = parsedParams.data.analysisId;
+  const deleted = database
+    ? (await database.db
+        .delete(database.specforgeAnalysesTable)
+        .where(eq(database.specforgeAnalysesTable.id, id))
+        .returning({ id: database.specforgeAnalysesTable.id })).length > 0
+    : memoryAnalyses.delete(id);
   if (!deleted) {
     res.status(404).json({ error: "Analysis not found." });
     return;

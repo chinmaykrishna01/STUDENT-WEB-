@@ -7,14 +7,14 @@
  */
 
 export interface AnalysisUpload {
-  /** DOCX course specification */
+  /** Required course document; supports PDF, DOC/DOCX, PPTX, XLSX, ODF, RTF, CSV, TSV, Markdown, TXT, HTML, JSON, EPUB, and TeX */
   courseSpecification: Blob | File;
-  /** Optional DOCX, CSV, JSON, or TXT question-paper blueprint */
+  /** Optional PDF, DOC/DOCX, PPTX, XLSX, ODF, RTF, CSV, TSV, Markdown, TXT, HTML, JSON, EPUB, or TeX question-paper blueprint */
   blueprint?: Blob | File;
-  /** Optional institutional HTML template */
+  /** Optional institutional HTML or HTM template */
   template?: Blob | File;
-  /** Optional DOCX, CSV, JSON, or TXT official PO/PSO definitions */
+  /** Optional PDF, DOC/DOCX, PPTX, XLSX, ODF, RTF, CSV, TSV, Markdown, TXT, HTML, JSON, EPUB, or TeX official PO/PSO definitions */
   outcomeDefinitions?: Blob | File;
-  /** Optional JSON, CSV, or TXT institutional rules */
+  /** Optional PDF, DOC/DOCX, PPTX, XLSX, ODF, RTF, CSV, TSV, Markdown, TXT, HTML, JSON, EPUB, or TeX institutional rules */
   institutionalRules?: Blob | File;
 }

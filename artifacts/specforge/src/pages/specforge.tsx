@@ -161,7 +161,7 @@ export function HomePage() {
               </tr>;
             })}</tbody>
           </table>
-        </div> : <div className="px-6 py-12 text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-indigo-50 text-indigo-700"><FileText size={21} /></div><h3 className="brand-font mt-4 text-base font-bold text-slate-800">Start with a course specification</h3><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">Add the course DOCX and any official institutional evidence you want considered. Nothing is assumed when evidence is absent.</p><Link href="/analyses/new" className="mt-5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white no-underline hover:bg-indigo-700" data-testid="link-empty-start"><Plus size={15} />Create your first analysis</Link></div>}
+        </div> : <div className="px-6 py-12 text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-indigo-50 text-indigo-700"><FileText size={21} /></div><h3 className="brand-font mt-4 text-base font-bold text-slate-800">Start with a course specification</h3><p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">Add a course document and any official institutional evidence you want considered. Nothing is assumed when evidence is absent.</p><Link href="/analyses/new" className="mt-5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white no-underline hover:bg-indigo-700" data-testid="link-empty-start"><Plus size={15} />Create your first analysis</Link></div>}
       </Panel>
       <div className="space-y-5">
         <Panel className="overflow-hidden">
@@ -183,12 +183,13 @@ export function HomePage() {
 }
 
 type FileRole = 'courseSpecification' | 'blueprint' | 'template' | 'outcomeDefinitions' | 'institutionalRules';
+const documentAccept = '.docx,.doc,.pdf,.pptx,.xlsx,.odt,.odp,.ods,.odg,.rtf,.csv,.tsv,.md,.txt,.html,.htm,.json,.epub,.tex';
 const uploadFields: { role: FileRole; label: string; help: string; required?: boolean; accept: string }[] = [
-  { role: 'courseSpecification', label: 'Course specification', help: 'DOCX · required', required: true, accept: '.docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
-  { role: 'blueprint', label: 'Question paper blueprint', help: 'DOCX, CSV, JSON, or TXT · optional', accept: '.docx,.csv,.json,.txt' },
+  { role: 'courseSpecification', label: 'Course specification', help: 'PDF, DOC/DOCX, Office, ODF, RTF, CSV, JSON, TXT, and more · required', required: true, accept: documentAccept },
+  { role: 'blueprint', label: 'Question paper blueprint', help: 'PDF, DOC/DOCX, Office, ODF, CSV, JSON, TXT, and more · optional', accept: documentAccept },
   { role: 'template', label: 'Official HTML template', help: 'HTML · optional', accept: '.html,.htm,text/html' },
-  { role: 'outcomeDefinitions', label: 'PO / PSO definitions', help: 'DOCX, CSV, JSON, or TXT · optional', accept: '.docx,.csv,.json,.txt' },
-  { role: 'institutionalRules', label: 'Institutional rules', help: 'JSON, CSV, or TXT · optional', accept: '.json,.csv,.txt' },
+  { role: 'outcomeDefinitions', label: 'PO / PSO definitions', help: 'PDF, DOC/DOCX, Office, ODF, CSV, JSON, TXT, and more · optional', accept: documentAccept },
+  { role: 'institutionalRules', label: 'Institutional rules', help: 'PDF, DOC/DOCX, Office, ODF, CSV, JSON, TXT, and more · optional', accept: documentAccept },
 ];
 
 export function NewAnalysisPage() {
@@ -217,9 +218,9 @@ export function NewAnalysisPage() {
     return next;
   });
   const sourceFile = files.courseSpecification;
-  const canReview = !!sourceFile && sourceFile.name.toLowerCase().endsWith('.docx');
+  const canReview = !!sourceFile;
   const submit = () => {
-    if (!sourceFile) { setError('Choose a course specification DOCX to continue.'); return; }
+    if (!sourceFile) { setError('Choose a course specification document to continue.'); return; }
     setError('');
     const data: AnalysisUpload = { courseSpecification: sourceFile };
     if (files.blueprint) data.blueprint = files.blueprint;
@@ -237,7 +238,11 @@ export function NewAnalysisPage() {
         setError('The analysis was created, but its label could not be saved.');
         setLocation(`/analyses/${analysis.id}`);
       }
-    }, onError: () => setError('The documents could not be processed. Check the file types and try again.') });
+    }, onError: (cause) => setError(
+      cause instanceof Error && !/failed to fetch/i.test(cause.message)
+        ? cause.message
+        : 'Could not reach the analysis API. Start the API server on port 5000 and try again.',
+    ) });
   };
   return <div className="fade-in mx-auto max-w-[920px]">
     <Link href="/" className="mb-5 inline-flex items-center gap-2 text-xs font-semibold text-slate-500 no-underline hover:text-indigo-700" data-testid="link-back-dashboard"><ArrowLeft size={15} />Back to overview</Link>
@@ -254,8 +259,8 @@ export function NewAnalysisPage() {
           {uploadFields.map(({ role, label, help, required, accept }) => {
             const file = files[role];
             return <div key={role} className="flex items-stretch gap-2">
-              <label className={cx('group min-w-0 flex-1 cursor-pointer rounded-xl border p-4 transition-colors focus-within:ring-2 focus-within:ring-indigo-500', file ? 'border-teal-200 bg-teal-50/40' : role === 'courseSpecification' ? 'border-dashed border-indigo-300 bg-indigo-50/25 hover:bg-indigo-50/60' : 'border-dashed border-slate-200 bg-slate-50/55 hover:border-slate-300 hover:bg-slate-50')} data-testid={`upload-field-${role}`}>
-                <input type="file" className="sr-only" accept={accept} required={required} onChange={(event) => onFileChange(role, event)} data-testid={`input-file-${role}`} />
+              <label className={cx('group relative min-w-0 flex-1 cursor-pointer rounded-xl border p-4 transition-colors focus-within:ring-2 focus-within:ring-indigo-500', file ? 'border-teal-200 bg-teal-50/40' : role === 'courseSpecification' ? 'border-dashed border-indigo-300 bg-indigo-50/25 hover:bg-indigo-50/60' : 'border-dashed border-slate-200 bg-slate-50/55 hover:border-slate-300 hover:bg-slate-50')} data-testid={`upload-field-${role}`}>
+                <input type="file" className="absolute inset-0 h-full w-full cursor-pointer opacity-0" accept={accept} required={required} onChange={(event) => onFileChange(role, event)} data-testid={`input-file-${role}`} />
                 <div className="flex items-start gap-3">
                   <div className={cx('grid h-9 w-9 shrink-0 place-items-center rounded-lg', file ? 'bg-teal-100 text-teal-800' : 'bg-white text-slate-500 shadow-sm')}><FileUp size={17} /></div>
                   <div className="min-w-0 flex-1"><div className="flex items-center gap-1 text-sm font-semibold text-slate-800">{label}{required && <span className="text-red-600">*</span>}</div><p className="mt-1 text-[11px] text-slate-500">{help}</p>{file && <p className="mt-2 truncate text-[11px] font-semibold text-teal-800">{file.name} · {(file.size / 1024).toFixed(0)} KB</p>}</div>
@@ -267,11 +272,11 @@ export function NewAnalysisPage() {
           })}
         </div>
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5">
-          <p className="text-[11px] leading-5 text-slate-500">DOCX files are processed after you continue. No extracted values are inferred or displayed before the document is read.</p>
-          <Button onClick={() => { if (canReview) { setError(''); setStep('review'); } else setError('Add a valid course specification DOCX first.'); }} data-testid="button-review-sources">Review sources <ArrowRight size={15} /></Button>
+          <p className="text-[11px] leading-5 text-slate-500">Documents are processed after you continue. No extracted values are inferred or displayed before the document is read.</p>
+          <Button onClick={() => { if (canReview) { setError(''); setStep('review'); } else setError('Add a course specification document first.'); }} data-testid="button-review-sources">Review sources <ArrowRight size={15} /></Button>
         </div>
       </div> : <div className="p-5 md:p-7">
-        <div className="mb-5"><label htmlFor="analysis-name" className="mb-1.5 block text-xs font-semibold text-slate-700">Analysis label <span className="font-normal text-slate-400">optional</span></label><input id="analysis-name" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={sourceFile?.name.replace(/\.docx$/i, '') || 'Course review'} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" data-testid="input-analysis-name" /></div>
+        <div className="mb-5"><label htmlFor="analysis-name" className="mb-1.5 block text-xs font-semibold text-slate-700">Analysis label <span className="font-normal text-slate-400">optional</span></label><input id="analysis-name" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={sourceFile?.name.replace(/\.[^.]+$/, '') || 'Course review'} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100" data-testid="input-analysis-name" /></div>
         <div className="rounded-xl border border-slate-200">
           <div className="border-b border-slate-100 px-4 py-3"><div className="text-xs font-bold text-slate-800">Selected evidence</div><div className="mt-1 text-[11px] text-slate-500">Content extraction runs on submission. The original wording remains available in the review workspace.</div></div>
           <div className="divide-y divide-slate-100">{uploadFields.filter((f) => files[f.role]).map((field) => {
