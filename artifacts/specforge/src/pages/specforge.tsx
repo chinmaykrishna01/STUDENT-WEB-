@@ -71,6 +71,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="px-4 pt-7">
         <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[.15em] text-slate-500">Workspace</div>
         {nav.map(({ href, label, icon: Icon, active }) => <Link key={href} href={href} onClick={() => setMobileMenu(false)} data-testid={`nav-${label.toLowerCase().replaceAll(' ', '-')}`} className={cx('mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-semibold no-underline transition-colors', active ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-100')}><Icon size={17} strokeWidth={1.8} />{label}{active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-indigo-300" />}</Link>)}
+        <a href="/generator/" onClick={() => setMobileMenu(false)} data-testid="nav-submission-generator" className="mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-[13px] font-semibold text-slate-400 no-underline transition-colors hover:bg-white/5 hover:text-slate-100"><FileUp size={17} strokeWidth={1.8} />Submission files</a>
       </div>
       <div className="mx-5 my-6 border-t border-white/10" />
       <div className="px-4">

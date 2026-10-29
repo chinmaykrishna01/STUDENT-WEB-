@@ -4,7 +4,7 @@ SpecForge extracts and reviews academic course specifications against only the i
 
 ## Run & Operate
 
-- `pnpm run local` — build and run the web app and API together at `http://localhost:5174`
+- `pnpm run local` — build and run the review dashboard and submission-file generator at `http://localhost:5174`
 - `pnpm --filter @workspace/api-server run dev` — build and run the API server (port 5000)
 - `pnpm --filter @workspace/specforge run dev` — run the SpecForge web app
 - `pnpm run typecheck` — full typecheck across all packages
@@ -21,7 +21,7 @@ Run this once from the workspace root:
 corepack pnpm run local
 ```
 
-Open `http://localhost:5174`. This serves both the web interface and `/api` from the same local server. Press Ctrl+C in the terminal to stop it. Analyses use temporary in-memory storage unless `DATABASE_URL` is configured, so they are lost when the server stops.
+Open `http://localhost:5174`. The review dashboard and submission-file generator are available on this same address. Use **Submission files** in the sidebar to generate the scoring JSON and HTML export. The generator API runs on a private loopback port and is proxied through this single browser origin. Press Ctrl+C in the terminal to stop the services. Analyses use temporary in-memory storage unless `DATABASE_URL` is configured, so they are lost when the server stops. The official buildathon sign-in and final upload portal remains externally hosted by its organizers.
 
 For frontend hot reload during development, the API and Vite frontend can still be started separately:
 
@@ -53,6 +53,7 @@ Open `http://localhost:5188`. For persistent analyses, configure `DATABASE_URL` 
 ## Where things live
 
 - `artifacts/specforge` — SpecForge React/Vite frontend
+- `../specforge-starter` — submission generator frontend and API, mounted locally at `/generator`
 - `artifacts/api-server/src/routes/specforge.ts` — upload, analysis, review, mapping, and export-data API routes
 - `artifacts/api-server/src/lib/specforge-processing.ts` — deterministic extraction, validation, mapping suggestions, and HTML draft generation
 - `lib/api-spec/openapi.yaml` — API contract source of truth; run codegen after changing it
