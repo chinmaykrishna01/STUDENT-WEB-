@@ -37,7 +37,7 @@ app.use("/api/v1", (req, res) => {
       hostname: "127.0.0.1",
       port,
       method: req.method,
-      path: req.url,
+      path: `/api/v1${req.url}`,
       headers: {
         "content-type": req.headers["content-type"] ?? "",
         ...(req.headers["content-length"]
