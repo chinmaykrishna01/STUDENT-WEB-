@@ -1,0 +1,117 @@
+You are a senior full-stack developer, AI engineer, and UI/UX designer. Build a complete, functional hackathon web application called SPECForge.
+
+PROJECT TITLE:
+SpecForge — Intelligent Course Specification Validator
+
+PROBLEM:
+Universities have course specification documents containing Course Outcomes (COs), Programme Outcomes (POs), Programme-Specific Outcomes (PSOs), syllabus units, teaching hours, credits, assessment details, and Bloom's Taxonomy levels. Over time, these documents contain missing information, inconsistent hours, incorrect mappings, duplicated content, and mismatches with question-paper blueprints.
+
+Build a web application that accepts a messy course specification and a question-paper blueprint, identifies errors, proposes evidence-based corrections, generates a fresh CO–PO–PSO mapping, and produces a corrected specification following the official institutional HTML template.
+
+TECHNOLOGY:
+- Frontend: React, TypeScript, and Tailwind CSS.
+- Backend: Python FastAPI for document processing and validation.
+- Document parsing: python-docx for DOCX files; use suitable tested parsers for other formats.
+- Validation: deterministic Python rules.
+- Optional AI: configurable API integration for semantic analysis.
+- Exports: HTML, PDF, JSON, and CSV where appropriate.
+
+If the environment cannot support this exact stack, explain the limitation and use the closest practical alternative without sacrificing core functionality.
+
+DESIGN:
+Create a premium, professional academic SaaS interface, not a generic landing page.
+
+Use:
+- Dark navy sidebar.
+- Clean white and light-gray surfaces.
+- Indigo accents and subtle teal success states.
+- Amber warnings and restrained red error indicators.
+- Elegant typography, rounded cards, subtle shadows, and smooth transitions.
+- Responsive desktop and mobile layouts.
+- Professional tables, charts, progress indicators, and empty states.
+
+APPLICATION PAGES:
+
+1. DASHBOARD
+Display the SpecForge logo, welcome heading, Start New Analysis button, recent projects, total documents analyzed, detected issues, pending approvals, and workflow progress.
+
+2. DOCUMENT UPLOAD
+Allow users to upload:
+- Course specification DOCX.
+- Question-paper blueprint in supported formats.
+- Official institutional HTML template.
+- Approved PO/PSO definitions and institutional rules when available.
+
+Display filenames, file types, validation status, and remove-file controls.
+
+3. DOCUMENT EXTRACTION
+Extract course title, course code, credits, lecture/tutorial/practical hours, syllabus units, COs, assessment information, Bloom's levels, existing mappings, and question-paper CO references.
+
+Show the extracted information in an editable review screen.
+
+4. VALIDATION RESULTS
+Detect missing fields, duplicate CO identifiers, inconsistent hours, invalid CO references, questionable Bloom's classifications, incorrect mapping scores, and template violations.
+
+Show each issue with severity, source evidence, explanation, original value, suggested correction, and review status.
+
+5. CO–PO–PSO MAPPING
+Create an editable matrix with course outcomes as rows and official programme outcomes and programme-specific outcomes as columns.
+
+Support configurable mapping scores. Use 0 for no link and 1, 2, 3 for increasing contribution only when compatible with the institution's rubric.
+
+Explain the evidence behind every proposed nonzero mapping. Highlight unsupported mappings and allow teachers to edit, accept, or reject suggestions.
+
+6. CORRECTION REVIEW
+Show original and proposed values side by side. Provide Accept, Reject, Edit, and Defer actions. Track reviewer comments and distinguish proposed corrections from approved corrections.
+
+7. CORRECTED SPECIFICATION
+Populate the actual official HTML template while preserving its mandatory headings, section order, tables, and formatting.
+
+Do not invent missing institutional information. Flag unresolved fields for review.
+
+8. EXPORT
+Generate downloadable corrected HTML, PDF, JSON validation reports, and CSV mapping tables. Mark documents as Draft until required approvals are complete.
+
+CORE VALIDATION RULES:
+- Compare detailed syllabus hours with summary hours.
+- Check credit calculations only against supplied institutional rules.
+- Detect missing and duplicated COs.
+- Detect question-paper references to nonexistent COs.
+- Suggest Bloom's levels based on the complete outcome, not just a keyword.
+- Rebuild the CO–PO–PSO matrix using official definitions and course evidence, not the old matrix.
+- Detect possible copied content from unrelated courses when sufficient reference documents exist.
+- Preserve original wording and explain every proposed correction.
+
+IMPORTANT:
+Never fabricate official COs, credits, hours, PO/PSO definitions, or institutional policies. Never claim that an AI-generated mapping is officially approved. Keep uncertain suggestions pending human review.
+
+FUNCTIONAL REQUIREMENTS:
+- All primary buttons and forms must work.
+- Implement actual file uploads and backend processing.
+- Add loading indicators, clear errors, and success states.
+- Validate file types and sizes.
+- Handle malformed documents.
+- Use sample data only when clearly labelled fictional.
+- Make basic deterministic validation work even when an AI API key is unavailable.
+- Store secrets in environment variables.
+- Include tests for important validation rules.
+
+IMPLEMENTATION PLAN:
+First create the application structure and a working dashboard.
+Then implement document upload and extraction.
+Next implement validation and CO–PO–PSO mapping.
+Then add correction review, official-template generation, and exports.
+Finally test the complete end-to-end workflow and fix errors.
+
+Do not stop after creating a static mockup. Build a runnable application with working functionality.
+
+If the official template or sample documents are not yet available, create a clearly labelled fictional demo mode and design the app to accept the real files later.
+
+At the end, tell me:
+1. What features are implemented.
+2. What is actually working.
+3. How to run and test the app.
+4. Which environment variables are needed.
+5. What remains incomplete.
+
+I am a beginner, so explain setup steps and errors in simple language. Start building the application now.

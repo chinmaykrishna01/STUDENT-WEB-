@@ -2,14 +2,16 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 0.2.0
+  description: API for the SpecForge course specification validator
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: specforge
+    description: Course specification analysis and review
 paths:
   /healthz:
     get:
@@ -24,6 +26,173 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /specforge/dashboard:
+    get:
+      operationId: getDashboard
+      tags: [specforge]
+      summary: Get the SpecForge dashboard summary
+      responses:
+        "200":
+          description: Dashboard totals and recent analyses
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /specforge/analyses:
+    get:
+      operationId: getAnalyses
+      tags: [specforge]
+      summary: List saved analyses
+      responses:
+        "200":
+          description: Saved analyses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Analysis"
+    post:
+      operationId: createAnalysis
+      tags: [specforge]
+      summary: Upload documents and create an analysis
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/AnalysisUpload"
+      responses:
+        "201":
+          description: Extracted and validated analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+        "400":
+          description: Unsupported, malformed, or missing document
+  /specforge/analyses/demo:
+    post:
+      operationId: createDemoAnalysis
+      tags: [specforge]
+      summary: Create a clearly fictional demo analysis
+      responses:
+        "201":
+          description: Fictional example analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+  /specforge/analyses/{analysisId}:
+    parameters:
+      - name: analysisId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: getAnalysis
+      tags: [specforge]
+      summary: Get one saved analysis
+      responses:
+        "200":
+          description: Saved analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+        "404":
+          description: Analysis not found
+    patch:
+      operationId: updateAnalysis
+      tags: [specforge]
+      summary: Save reviewed course data and document corrections
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalysisUpdate"
+      responses:
+        "200":
+          description: Updated analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+        "404":
+          description: Analysis not found
+    delete:
+      operationId: deleteAnalysis
+      tags: [specforge]
+      summary: Delete an analysis
+      responses:
+        "204":
+          description: Analysis deleted
+        "404":
+          description: Analysis not found
+  /specforge/analyses/{analysisId}/issues/{issueId}:
+    parameters:
+      - name: analysisId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: issueId
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      operationId: reviewIssue
+      tags: [specforge]
+      summary: Record a correction review decision
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueReviewInput"
+      responses:
+        "200":
+          description: Updated analysis with the review decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+        "404":
+          description: Analysis or issue not found
+  /specforge/analyses/{analysisId}/mappings/{mappingId}:
+    parameters:
+      - name: analysisId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: mappingId
+        in: path
+        required: true
+        schema:
+          type: string
+    patch:
+      operationId: updateMapping
+      tags: [specforge]
+      summary: Edit a CO to PO or PSO mapping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MappingUpdate"
+      responses:
+        "200":
+          description: Updated analysis with mapping
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Analysis"
+        "404":
+          description: Analysis or mapping not found
 components:
   schemas:
     HealthStatus:
@@ -33,4 +202,321 @@ components:
           type: string
       required:
         - status
+    DashboardSummary:
+      type: object
+      required: [totalDocumentsAnalyzed, detectedIssues, pendingApprovals, recentAnalyses]
+      properties:
+        totalDocumentsAnalyzed:
+          type: integer
+        detectedIssues:
+          type: integer
+        pendingApprovals:
+          type: integer
+        recentAnalyses:
+          type: array
+          items:
+            $ref: "#/components/schemas/Analysis"
+    AnalysisUpload:
+      type: object
+      required: [courseSpecification]
+      properties:
+        courseSpecification:
+          type: string
+          format: binary
+          description: DOCX course specification
+        blueprint:
+          type: string
+          format: binary
+          description: Optional DOCX, CSV, JSON, or TXT question-paper blueprint
+        template:
+          type: string
+          format: binary
+          description: Optional institutional HTML template
+        outcomeDefinitions:
+          type: string
+          format: binary
+          description: Optional DOCX, CSV, JSON, or TXT official PO/PSO definitions
+        institutionalRules:
+          type: string
+          format: binary
+          description: Optional JSON, CSV, or TXT institutional rules
+    AnalysisUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        courseData:
+          $ref: "#/components/schemas/CourseData"
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationIssue"
+        templateHtml:
+          type: ["string", "null"]
+        correctedHtml:
+          type: ["string", "null"]
+        unresolvedFields:
+          type: array
+          items:
+            type: string
+    IssueReviewInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [pending, accepted, rejected, deferred]
+        reviewerComment:
+          type: ["string", "null"]
+    MappingUpdate:
+      type: object
+      properties:
+        score:
+          type: integer
+          minimum: 0
+          maximum: 3
+        evidence:
+          type: string
+        status:
+          type: string
+          enum: [suggested, accepted, rejected]
+    Analysis:
+      type: object
+      required:
+        - id
+        - name
+        - courseTitle
+        - courseCode
+        - status
+        - createdAt
+        - updatedAt
+        - sourceFiles
+        - courseData
+        - issues
+        - templateHtml
+        - correctedHtml
+        - unresolvedFields
+        - approvalsComplete
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        courseTitle:
+          type: string
+        courseCode:
+          type: string
+        status:
+          type: string
+          enum: [draft]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        sourceFiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/SourceFile"
+        courseData:
+          $ref: "#/components/schemas/CourseData"
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationIssue"
+        templateHtml:
+          type: ["string", "null"]
+        correctedHtml:
+          type: ["string", "null"]
+        unresolvedFields:
+          type: array
+          items:
+            type: string
+        approvalsComplete:
+          type: boolean
+    SourceFile:
+      type: object
+      required: [id, role, filename, fileType, status, extractedText]
+      properties:
+        id:
+          type: string
+        role:
+          type: string
+          enum: [courseSpecification, blueprint, template, outcomeDefinitions, institutionalRules]
+        filename:
+          type: string
+        fileType:
+          type: string
+        status:
+          type: string
+          enum: [processed, unsupported, failed]
+        extractedText:
+          type: string
+    CourseData:
+      type: object
+      required:
+        - title
+        - courseCode
+        - credits
+        - teachingHours
+        - syllabusUnits
+        - outcomes
+        - assessments
+        - programmeOutcomes
+        - mappings
+        - questionCoReferences
+        - institutionalRulesProvided
+      properties:
+        title:
+          type: string
+        courseCode:
+          type: string
+        credits:
+          type: ["number", "null"]
+        teachingHours:
+          $ref: "#/components/schemas/TeachingHours"
+        syllabusUnits:
+          type: array
+          items:
+            $ref: "#/components/schemas/SyllabusUnit"
+        outcomes:
+          type: array
+          items:
+            $ref: "#/components/schemas/CourseOutcome"
+        assessments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Assessment"
+        programmeOutcomes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProgrammeOutcome"
+        mappings:
+          type: array
+          items:
+            $ref: "#/components/schemas/OutcomeMapping"
+        questionCoReferences:
+          type: array
+          items:
+            type: string
+        institutionalRulesProvided:
+          type: boolean
+    TeachingHours:
+      type: object
+      required: [lecture, tutorial, practical, summaryTotal, syllabusTotal]
+      properties:
+        lecture:
+          type: number
+        tutorial:
+          type: number
+        practical:
+          type: number
+        summaryTotal:
+          type: ["number", "null"]
+        syllabusTotal:
+          type: number
+    SyllabusUnit:
+      type: object
+      required: [id, title, hours]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        hours:
+          type: number
+    CourseOutcome:
+      type: object
+      required: [id, text, bloomLevel]
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        bloomLevel:
+          type: ["string", "null"]
+    Assessment:
+      type: object
+      required: [name, weightPercent, courseOutcomeIds]
+      properties:
+        name:
+          type: string
+        weightPercent:
+          type: ["number", "null"]
+        courseOutcomeIds:
+          type: array
+          items:
+            type: string
+    ProgrammeOutcome:
+      type: object
+      required: [id, title, description, type]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [PO, PSO]
+    OutcomeMapping:
+      type: object
+      required: [id, courseOutcomeId, programmeOutcomeId, score, evidence, status]
+      properties:
+        id:
+          type: string
+        courseOutcomeId:
+          type: string
+        programmeOutcomeId:
+          type: string
+        score:
+          type: integer
+          minimum: 0
+          maximum: 3
+        evidence:
+          type: string
+        status:
+          type: string
+          enum: [suggested, accepted, rejected]
+    ValidationIssue:
+      type: object
+      required:
+        - id
+        - code
+        - severity
+        - title
+        - source
+        - evidence
+        - explanation
+        - originalValue
+        - suggestedValue
+        - status
+        - reviewerComment
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        severity:
+          type: string
+          enum: [error, warning, info]
+        title:
+          type: string
+        source:
+          type: string
+        evidence:
+          type: string
+        explanation:
+          type: string
+        originalValue:
+          type: ["string", "null"]
+        suggestedValue:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, accepted, rejected, deferred]
+        reviewerComment:
+          type: ["string", "null"]
 
